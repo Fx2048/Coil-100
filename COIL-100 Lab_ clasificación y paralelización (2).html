@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>COIL-100 Lab: clasificación y paralelización</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1f4;--panel:#fff;--ink:#14233a;--mute:#5b6b80;--line:#d3dae3;--train:#1f7a8c;--test:#d98a1c;--bad:#b83a2e;--good:#2b8a57;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1724;--panel:#16233a;--ink:#e6edf6;--mute:#93a3b8;--line:#2a3b56;--train:#4fc0d4;--test:#f0a940;--bad:#ef7b6e;--good:#5fd196;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1724;--panel:#16233a;--ink:#e6edf6;--mute:#93a3b8;--line:#2a3b56;--train:#4fc0d4;--test:#f0a940;--bad:#ef7b6e;--good:#5fd196;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 "IBM Plex Sans",system-ui,sans-serif}
+h1,h2,h3{font-family:"Bricolage Grotesque","IBM Plex Sans",system-ui,sans-serif;line-height:1.1;margin:0}
+main{max-width:1060px;margin:0 auto;padding:32px 20px 64px}
+h1{font-size:clamp(2rem,5vw,3.4rem);font-weight:700;max-width:18ch;letter-spacing:-.02em}
+h2{font-size:1.6rem;margin-bottom:6px}
+p.lead{max-width:62ch;color:var(--mute);margin:14px 0 0}
+section{margin-top:56px}
+section>p{max-width:64ch;color:var(--mute);margin:0 0 20px}
+.hero{display:grid;grid-template-columns:1fr minmax(280px,420px);gap:32px;align-items:center}
+@media(max-width:800px){.hero{grid-template-columns:1fr}}
+.dial svg{width:100%;height:auto;display:block}
+.seg{cursor:pointer;transition:opacity .15s}
+.seg.train{fill:var(--train)}.seg.test{fill:var(--test)}
+.seg:hover,.seg:focus{opacity:.55;outline:none}
+.ctr{fill:var(--ink);font-family:"Bricolage Grotesque",sans-serif}
+.ctr.s{fill:var(--mute);font-family:"IBM Plex Sans",sans-serif}
+.tabs{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:18px 0 12px}
+.tabs button{font:inherit;background:var(--panel);color:var(--ink);border:0;padding:8px 16px;cursor:pointer}
+.tabs button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.tabs button:focus-visible{outline:2px solid var(--test);outline-offset:-2px}
+.legend{display:flex;gap:18px;font-size:.9rem;color:var(--mute);flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.facts{margin-top:14px;font-size:.95rem;min-height:3.2em}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.93rem}
+th,td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:500;color:var(--mute)}
+td.hi{font-weight:500}
+.bar{display:grid;grid-template-columns:minmax(120px,190px) 1fr 76px;gap:12px;align-items:center;margin:9px 0;font-size:.92rem}
+.bar .t{height:18px;background:var(--line);border-radius:4px;overflow:hidden}
+.bar .t b{display:block;height:100%;border-radius:4px;background:var(--train);transition:width .45s}
+.bar .t b.o{background:var(--test)}.bar .t b.g{background:var(--good)}.bar .t b.r{background:var(--bad)}
+.bar span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+@media(max-width:520px){.bar{grid-template-columns:1fr 64px}.bar .t{grid-column:1/-1;grid-row:2}}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.kpi{display:flex;gap:28px;flex-wrap:wrap;margin-bottom:8px}
+.kpi div{min-width:110px}.kpi strong{font:700 1.9rem "Bricolage Grotesque",sans-serif;display:block;line-height:1.1}
+.kpi small{color:var(--mute)}
+.note{margin-top:14px;font-size:.9rem;color:var(--mute)}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 20px;margin:0;font-size:.93rem}
+dt{color:var(--mute)}dd{margin:0}
+.cam{display:grid;grid-template-columns:minmax(240px,1fr) minmax(240px,1fr);gap:24px}
+@media(max-width:720px){.cam{grid-template-columns:1fr}}
+.cam video,.cam canvas{width:100%;aspect-ratio:1;background:#000;border-radius:8px;display:block;object-fit:cover}
+.cam canvas{width:128px;margin-top:10px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.btns button,.btns label{font:inherit;background:var(--ink);color:var(--bg);border:0;border-radius:8px;padding:9px 14px;cursor:pointer}
+.btns .sec{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+.btns button:focus-visible,.btns label:focus-within{outline:2px solid var(--test);outline-offset:2px}
+.btns input{position:absolute;opacity:0;width:1px;height:1px}
+#cstat{font-size:.9rem;color:var(--mute);min-height:2.8em}
+#top{font:700 1.6rem "Bricolage Grotesque",sans-serif;margin-bottom:8px}
+.o{display:flex;align-items:center;gap:8px}
+.o img{width:30px;height:30px;border-radius:6px;object-fit:cover;flex:none}
+.o small{color:var(--mute)}
+.objs{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+.objs figure{margin:0;text-align:center;font-size:.85rem;line-height:1.3}
+.objs img{width:64px;height:64px;border-radius:8px;display:block;margin:0 auto 4px;object-fit:cover}
+.objs small{color:var(--mute);display:block}
+footer{margin-top:64px;color:var(--mute);font-size:.85rem}
+</style>
+</head>
+<body>
+<main>
+<header class="hero">
+  <div>
+    <h1>¿Reconoce el modelo un objeto desde un ángulo que nunca vio?</h1>
+    <p class="lead">Cinco objetos de COIL-100 giran sobre una plataforma y se fotografían cada 5°. Se compara un Random Forest con características clásicas frente a MobileNetV2, y se mide cuánto aceleran la GPU, el procesamiento paralelo y ONNX.</p>
+    <div class="tabs" role="group" aria-label="Escenario de partición">
+      <button id="bA" aria-pressed="false">Escenario A: bloques intercalados</button>
+      <button id="bB" aria-pressed="true">Escenario B: ángulos nuevos</button>
+    </div>
+    <div class="legend"><span><i style="background:var(--train)"></i>Entrenamiento</span><span><i style="background:var(--test)"></i>Prueba</span></div>
+    <div class="facts" id="facts" aria-live="polite"></div>
+    <div class="objs" id="objs" aria-label="Los cinco objetos del experimento"></div>
+  </div>
+  <div class="dial"><svg id="dial" viewBox="0 0 400 400" role="img" aria-label="Plataforma giratoria con las 72 vistas de cada objeto, coloreadas según sean de entrenamiento o de prueba"></svg></div>
+</header>
+
+<section>
+  <h2>Calidad de clasificación</h2>
+  <p>En el escenario A, las vistas de prueba quedan entre vistas de entrenamiento muy parecidas, así que acertar es fácil. En el B, los ángulos de 180° a 355° no aparecen en el entrenamiento: es la prueba real de generalización.</p>
+  <div class="panel scroll"><table id="cls"></table></div>
+  <div class="two" style="margin-top:20px">
+    <div class="panel"><h3 style="font-size:1.15rem;margin-bottom:10px">Random Forest, escenario B: recall por objeto</h3><div id="rec"></div>
+      <p class="note" style="margin-bottom:0">El pimiento rojo (63) absorbe falsos positivos (precisión 0,766) y la fresa (75) pierde un 30,6 % de sus vistas.</p></div>
+    <div class="panel"><h3 style="font-size:1.15rem;margin-bottom:10px">Efecto de la resolución en MobileNetV2</h3><div id="res"></div>
+      <p class="note" style="margin-bottom:0">A 64×64 el entrenamiento es 3,3× más rápido, pero se pierden 4 imágenes de 180.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Velocidad de inferencia</h2>
+  <p>Latencia media por imagen. Las tres primeras filas incluyen leer la imagen y prepararla; las dos últimas miden solo el modelo sobre tensores ya listos, por eso no son comparables con las anteriores.</p>
+  <div class="panel">
+    <div class="tabs" role="group" aria-label="Métrica"><button id="mL" aria-pressed="true">Latencia (ms)</button><button id="mT" aria-pressed="false">Imágenes por segundo</button></div>
+    <div id="lat"></div>
+    <div class="kpi" style="margin-top:18px"><div><strong>6,13×</strong><small>ONNX frente a PyTorch en CPU</small></div><div><strong>−83,7 %</strong><small>latencia con ONNX</small></div><div><strong>2,3×</strong><small>GPU frente a CPU, con carga de imagen</small></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Tamaño de lote</h2>
+  <p>Procesar varias imágenes juntas aprovecha mejor el hardware, sobre todo en GPU. La precisión se mantiene en 100 % en todos los casos.</p>
+  <div class="panel"><div class="tabs" role="group" aria-label="Dispositivo"><button id="dC" aria-pressed="false">CPU</button><button id="dG" aria-pressed="true">GPU (T4)</button></div><div id="bat"></div></div>
+</section>
+
+<section>
+  <h2>Paralelización de características</h2>
+  <p>Extraer color, HOG y LBP de las 360 imágenes del escenario B con varios procesos. Con 4 hilos lógicos (2 núcleos físicos) el tiempo casi no mejora al pasar de 2 a 4 procesos.</p>
+  <div class="two">
+    <div class="panel"><div id="par"></div></div>
+    <div class="panel"><div class="kpi"><div><strong>1,80×</strong><small>con 2 procesos</small></div><div><strong>1,95×</strong><small>con 4 procesos</small></div></div>
+      <p class="note">La eficiencia cae de 90 % a 49 %. Los resultados son idénticos a la versión secuencial.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Prueba con cámara</h2>
+  <p>Clasifica una foto con tu propio modelo exportado. Carga el archivo <b>mobilenet_128_scenario_B.onnx</b> de la carpeta results del notebook; todo se procesa en tu navegador y ninguna imagen sale de tu dispositivo. COIL-100 usa objetos sobre fondo negro, así que obtendrás mejores resultados con un fondo oscuro liso.</p>
+  <div class="panel cam">
+    <div>
+      <video id="vid" playsinline muted></video>
+      <div class="btns">
+        <button id="bCam">Activar cámara</button>
+        <button id="bSnap" class="sec">Capturar y clasificar</button>
+        <label class="sec">Subir foto<input type="file" id="fImg" accept="image/*"></label>
+      </div>
+    </div>
+    <div>
+      <div class="btns" style="margin-top:0"><label>Cargar modelo .onnx<input type="file" id="fMod" accept=".onnx"></label></div>
+      <div id="cstat" aria-live="polite">Sin modelo cargado.</div>
+      <div id="top"></div>
+      <div id="prob"></div>
+      <canvas id="pre" width="128" height="128" aria-label="Imagen reducida a 128 por 128 que recibe el modelo"></canvas>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Exportación a ONNX</h2>
+  <p>El modelo MobileNetV2 de 128×128 se exportó con tamaño de lote dinámico y se comparó con PyTorch sobre 50 imágenes de prueba.</p>
+  <div class="two">
+    <div class="panel"><dl><dt>Tamaño del archivo</dt><dd>8,48 MB</dd><dt>Opset</dt><dd>18</dd><dt>Entrada</dt><dd>[batch, 3, 128, 128]</dd><dt>Salida</dt><dd>[batch, 5]</dd><dt>Parámetros</dt><dd>2.230.277</dd></dl></div>
+    <div class="panel"><dl><dt>Coincidencia de predicciones</dt><dd>100 %</dd><dt>Diferencia máxima de logits</dt><dd>1,76 × 10⁻⁵</dd><dt>Precisión en la muestra</dt><dd>100 %</dd><dt>Latencia p95</dt><dd>3,40 ms (PyTorch: 17,70 ms)</dd></dl></div>
+  </div>
+</section>
+
+<section>
+  <h2>Entorno experimental</h2>
+  <div class="panel"><dl><dt>Plataforma</dt><dd>Kaggle, Linux x86_64</dd><dt>CPU</dt><dd>2 núcleos físicos, 4 hilos lógicos</dd><dt>RAM</dt><dd>31,35 GB</dd><dt>GPU</dt><dd>2 × Tesla T4 (CUDA 13.0)</dd><dt>Software</dt><dd>PyTorch 2.11, scikit-learn 1.6.1, OpenCV 4.14, NumPy 2.1.3</dd><dt>Configuración</dt><dd>8 épocas, lote de 32, tasa de aprendizaje 1e-4, 100 árboles, semilla 42</dd><dt>Objetos</dt><dd>Taza de sandía (43), pimiento rojo (63), grapadora (68), patito de goma (74) y fresa (75), con 72 vistas cada uno</dd></dl></div>
+</section>
+<footer>Datos tomados de las salidas del notebook. Dataset: COIL-100 (7.200 imágenes, 100 objetos).</footer>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const NAMES={obj043:'Taza de sandía',obj063:'Pimiento rojo',obj068:'Grapadora',obj074:'Patito de goma',obj075:'Fresa'};
+const THUMBS={"obj043": "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", "obj063": "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", "obj068": "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBAUEBAYFBQUGBgYHCQ4JCQgICRINDQoOFRIWFhUSFBQXGiEcFxgfGRQUHScdHyIjJSUlFhwpLCgkKyEkJST/2wBDAQYGBgkICREJCREkGBQYJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCT/wAARCABgAGADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD53ooooAKKKKACiiigAooooAKKKKACiiigAzRgkZxxTOle+/CfQNOk8IQNdQ2sskrFyJMFv1pN2A8For6mn+Hnhy9H7zRbVx/sqP6VlXfwX8KXJJ+wTQe0UhUUcyCx83UV7vd/AHR5BIbXUryFsEqrAMM9hXl9/wDDfxTYM3maHelASAypnNF0BzFFXrnQtUs/+PjTryL/AHomqk6GMkOCh9GGDVWFcSigCkIxSAWimmigLhjnHrxXr2gBrbS7ZQSuEFeQg7Wz6HNdPb+O76G3WJYIiVAGfaommxo9Jg1vVImzAXC9syEVs2fjbXrQg5ZwOzHcDXmEHxGaJgJLIOuBypxWxafEbSpcCaGaI+uMgVi4s0Uj0y3+I+pyOEksLdsnlimMfrWrF4ytXH76zkQn+4+a81tfF2iTgbbxFz/eGK1INSsrj/VXUL/RxSV0D1O+HibS5QNzSqfRkBqGZfC+o58+DTpWbqZbdcn8cVyAIYZBB9waXBqlJk8qNyf4c+B9RDf8SzT9zd4pCp/nWXdfA3wlcj91FdQe8c2f5g1XyQOCaVbiaP7srr9DVe0YcpmXn7PemSMPsmsXUA9JIxJ+uRXkHibw/N4a1m50ydt7QPtD4xuHY17v/bd9bru+2SKo7luBXnnxaj+3C11WQ5nbMUjAfex0NVGpd2YnE5jw74ai1W2eeZJWwxA2HFRa5o8Gl3CwoksZ27jvOc16l4GTSLXRFjcjcJX6n/aOKv6p4f8ACetXAuLsMXC7flcjijmEeGiNQFYncD1XvXQeHtLjvreSX7GZgr4BBr0xPA/gYdYpD/20NdDpFp4T0W2+z2cASMnccknJ/GhyRVjyn+wYT/zC/wAyaBoqRn5dMx9GIr2ddQ8PD/lkn/fNSDU/DveFP++ai4HjqNfWIURWUg9BvJqwviPWQ0VuLPYZJFXzCCSM163/AGt4c/54R/8AfNH9r+HMg/Z4uD/cpaMepzC2V8BkqH/4Dig290Otsx+ldgPE+igYCoB/u0HxTow7J/3zSsh6nHrpkuoI0ZtnK55Bql4r8NSt4V1OSazPlQQ713D7rDuK7g+J9GDFgqhvZTTZPE2jXaPa3MayW8ylJEYHDKeoqlYnU+ZrbxVqlpH5cMsQXJPMYPJqceNtaHSeH/vyKwaK2siToB471wdJ4P8AvyKcPH+vD/l4g/78Cudoo5UB0n/CwfEH/Pxb/wDfgUf8LD8Qf897b/wHFc3RRyoLnS/8LD8Qf897b/wHFN/4WD4g/wCfi3/78Cucoo5UO50f/Cwdf/5+Lf8A78CkPj7Xz/y8w/8AfkVztFHKhXOh/wCE81//AJ+ov+/QqNvG+vMSftuP91AKwqKOVBcKKUqQccfhRg0wEopcGjBoASilwaMGgBKKXBowaAEopcGjBoASilwaMGgD/9k=", "obj074": "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", "obj075": "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"};
+const obj=c=>`<span class="o"><img src="data:image/jpeg;base64,${THUMBS[c]}" alt=""><span>${NAMES[c]} <small>${c}</small></span></span>`;
+const fmt=(n,d=1)=>n.toLocaleString('es-PE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const press=(a,b,on)=>{$(a).setAttribute('aria-pressed',on);$(b).setAttribute('aria-pressed',!on)};
+
+/* Dial */
+const info={
+ A:{rule:a=>((Math.floor(a/5)/4|0)%5===4)?'test':'train',txt:'60 imágenes de prueba (3 bloques de 20° por objeto). Random Forest acierta 100 %: las vistas de prueba tienen vecinas casi idénticas en el entrenamiento.'},
+ B:{rule:a=>a<180?'train':'test',txt:'Entrena con 0°–175° y prueba con 180°–355°. Random Forest baja a 93,9 %; MobileNetV2 a 128×128 mantiene 100 %.'}
+};
+let scen='B';
+function pol(r,deg){const t=(deg-90)*Math.PI/180;return[200+r*Math.cos(t),200+r*Math.sin(t)]}
+function drawDial(){
+  const svg=$('dial');let h='';
+  for(let i=0;i<72;i++){
+    const a=i*5,a0=a-2.3,a1=a+2.3;
+    const [x1,y1]=pol(185,a0),[x2,y2]=pol(185,a1),[x3,y3]=pol(120,a1),[x4,y4]=pol(120,a0);
+    const k=info[scen].rule(a);
+    h+=`<path class="seg ${k}" tabindex="0" data-a="${a}" data-k="${k}" d="M${x1},${y1}A185,185 0 0 1 ${x2},${y2}L${x3},${y3}A120,120 0 0 0 ${x4},${y4}Z"><title>${a}° · ${k==='train'?'entrenamiento':'prueba'}</title></path>`;
+  }
+  for(const a of [0,90,180,270]){const [x,y]=pol(200,a);h+=`<text class="ctr s" x="${x}" y="${y+4}" font-size="11" text-anchor="middle">${a}°</text>`}
+  h+=`<text class="ctr" id="cA" x="200" y="205" font-size="52" font-weight="700" text-anchor="middle">${scen==='A'?'100 %':'93,9 %'}</text>
+  <text class="ctr s" x="200" y="232" font-size="13" text-anchor="middle">Random Forest</text>
+  <text class="ctr s" id="cB" x="200" y="165" font-size="12" text-anchor="middle">precisión en prueba</text>`;
+  svg.innerHTML=h;
+  $('facts').textContent=info[scen].txt;
+}
+function show(e){const s=e.target.closest('.seg');if(!s)return;
+  $('cB').textContent=`${s.dataset.a}° · ${s.dataset.k==='train'?'entrenamiento':'prueba'}`}
+$('dial').addEventListener('mouseover',show);$('dial').addEventListener('focusin',show);
+$('dial').addEventListener('mouseleave',()=>$('cB').textContent='precisión en prueba');
+$('bA').onclick=()=>{scen='A';press('bA','bB',true);drawDial()};
+$('bB').onclick=()=>{scen='B';press('bB','bA',true);drawDial()};
+
+/* Tabla de clasificación */
+const cls=[
+ ['Random Forest','A','1870 car.',1,1,1,1],
+ ['Random Forest','B','1870 car.',.9389,.9532,.9389,.9374],
+ ['MobileNetV2 128×128','B','2,23 M par.',1,1,1,1],
+ ['MobileNetV2 64×64','B','2,23 M par.',.9778,.98,.9778,.9777]];
+$('cls').innerHTML='<tr><th>Modelo</th><th>Escenario</th><th>Entrada</th><th>Exactitud</th><th>Precisión</th><th>Recall</th><th>F1</th></tr>'+
+ cls.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td>${r.slice(3).map((v,i)=>`<td class="${i===0?'hi':''}">${fmt(v*100,1)} %</td>`).join('')}</tr>`).join('');
+
+/* Barras genéricas */
+function bars(el,rows,max,unit,d=1){
+  $(el).innerHTML=rows.map(r=>`<div class="bar"><span>${r[0]}</span><span class="t"><b class="${r[2]||''}" style="width:${Math.max(2,r[1]/max*100)}%"></b></span><span>${fmt(r[1],d)}${unit}</span></div>`).join('')}
+bars('rec',[['obj043',100,'g'],['obj063',100,'g'],['obj068',100,'g'],['obj074',100,'g'],['obj075',69.44,'r']].map(r=>[obj(r[0]),r[1],r[2]]),100,' %');
+$('objs').innerHTML=Object.keys(NAMES).map(c=>`<figure><img src="data:image/jpeg;base64,${THUMBS[c]}" alt="${NAMES[c]}">${NAMES[c]}<small>${c}</small></figure>`).join('');
+bars('res',[['128×128',100,'g'],['64×64',97.78,'o']],100,' %');
+bars('par',[['Secuencial',1,''],['2 procesos',1.80,'g'],['4 procesos',1.95,'g'],['Ideal con 4',4,'o']],4,'×',2);
+
+/* Latencia */
+const lat=[['Random Forest (CPU)',14.07,71.06,'o'],['MobileNetV2 CPU',16.31,61.30,''],['MobileNetV2 GPU',7.12,140.47,'g'],['PyTorch CPU (solo modelo)',14.71,68.11,''],['ONNX Runtime CPU (solo modelo)',2.40,417.93,'g']];
+let metric='L';
+function drawLat(){
+  const i=metric==='L'?1:2,max=Math.max(...lat.map(r=>r[i]));
+  bars('lat',lat.map(r=>[r[0],r[i],r[3]]),max,metric==='L'?' ms':' img/s',metric==='L'?2:1)}
+$('mL').onclick=()=>{metric='L';press('mL','mT',true);drawLat()};
+$('mT').onclick=()=>{metric='T';press('mT','mL',true);drawLat()};
+
+/* Lotes */
+const bat={cpu:[[1,19.05,52.5],[8,9.40,106.4],[16,8.05,124.3],[32,11.09,90.2]],gpu:[[1,8.85,112.9],[8,2.01,498.2],[16,1.72,582.5],[32,1.61,619.3]]};
+let dev='gpu';
+function drawBat(){const d=bat[dev],max=Math.max(...d.map(r=>r[2]));
+  bars('bat',d.map(r=>[`Lote de ${r[0]} · ${fmt(r[1],2)} ms/img`,r[2],dev==='gpu'?'g':'']),max,' img/s')}
+$('dC').onclick=()=>{dev='cpu';press('dC','dG',true);drawBat()};
+$('dG').onclick=()=>{dev='gpu';press('dG','dC',true);drawBat()};
+
+drawDial();drawLat();drawBat();
+
+/* Cámara */
+const CLASSES=['obj043','obj063','obj068','obj074','obj075'],MEAN=[.485,.456,.406],STD=[.229,.224,.225];
+let sess=null,stream=null;const pre=$('pre'),pctx=pre.getContext('2d',{willReadFrequently:true});
+const say=t=>$('cstat').textContent=t;
+$('bCam').onclick=async()=>{
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    $('vid').srcObject=stream;await $('vid').play();say(sess?'Cámara activa. Toca Capturar y clasificar.':'Cámara activa. Falta cargar el modelo .onnx.')}
+  catch(e){say('No se pudo abrir la cámara ('+e.name+'). Permite el acceso en el navegador o usa Subir foto.')}};
+$('fMod').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  if(typeof ort==='undefined'){say('No se pudo cargar ONNX Runtime Web. Revisa tu conexión.');return}
+  say('Cargando modelo…');
+  try{ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/';ort.env.wasm.numThreads=1;
+    sess=await ort.InferenceSession.create(new Uint8Array(await f.arrayBuffer()),{executionProviders:['wasm']});
+    say('Modelo listo: '+f.name+'. Captura una imagen.')}
+  catch(err){sess=null;say('No se pudo cargar el modelo: '+err.message)}};
+function toTensor(src){
+  const w=src.videoWidth||src.naturalWidth||src.width,h=src.videoHeight||src.naturalHeight||src.height,s=Math.min(w,h);
+  pctx.drawImage(src,(w-s)/2,(h-s)/2,s,s,0,0,128,128);
+  const d=pctx.getImageData(0,0,128,128).data,n=128*128,f=new Float32Array(3*n);
+  for(let c=0;c<3;c++)for(let i=0;i<n;i++)f[c*n+i]=(d[i*4+c]/255-MEAN[c])/STD[c];
+  return f}
+async function classify(src){
+  const f=toTensor(src);
+  if(!sess){say('Carga primero el modelo .onnx para ver la predicción.');return}
+  try{const t0=performance.now();
+    const out=await sess.run({input:new ort.Tensor('float32',f,[1,3,128,128])});
+    const ms=performance.now()-t0,l=Array.from(out.logits.data),m=Math.max(...l),e=l.map(v=>Math.exp(v-m)),z=e.reduce((a,b)=>a+b,0),p=e.map(v=>v/z);
+    const k=p.indexOf(Math.max(...p));
+    $('top').textContent=NAMES[CLASSES[k]]+' · '+fmt(p[k]*100,1)+' %';
+    bars('prob',CLASSES.map((c,i)=>[obj(c),p[i]*100,i===k?'g':'']),100,' %');
+    say('Inferencia en '+fmt(ms,1)+' ms (WebAssembly, CPU del navegador).')}
+  catch(err){say('Error al clasificar: '+err.message)}}
+$('bSnap').onclick=()=>{if(!stream){say('Activa la cámara primero.');return}classify($('vid'))};
+$('fImg').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image();
+  im.onload=()=>{classify(im);URL.revokeObjectURL(im.src)};im.src=URL.createObjectURL(f)};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+</body>
+</html>
