@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>COIL-100 Lab: clasificación y paralelización</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1f4;--panel:#fff;--ink:#14233a;--mute:#5b6b80;--line:#d3dae3;--train:#1f7a8c;--test:#d98a1c;--bad:#b83a2e;--good:#2b8a57;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1724;--panel:#16233a;--ink:#e6edf6;--mute:#93a3b8;--line:#2a3b56;--train:#4fc0d4;--test:#f0a940;--bad:#ef7b6e;--good:#5fd196;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1724;--panel:#16233a;--ink:#e6edf6;--mute:#93a3b8;--line:#2a3b56;--train:#4fc0d4;--test:#f0a940;--bad:#ef7b6e;--good:#5fd196;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 "IBM Plex Sans",system-ui,sans-serif}
+h1,h2,h3{font-family:"Bricolage Grotesque","IBM Plex Sans",system-ui,sans-serif;line-height:1.1;margin:0}
+main{max-width:1060px;margin:0 auto;padding:32px 20px 64px}
+h1{font-size:clamp(2rem,5vw,3.4rem);font-weight:700;max-width:18ch;letter-spacing:-.02em}
+h2{font-size:1.6rem;margin-bottom:6px}
+p.lead{max-width:62ch;color:var(--mute);margin:14px 0 0}
+section{margin-top:56px}
+section>p{max-width:64ch;color:var(--mute);margin:0 0 20px}
+.hero{display:grid;grid-template-columns:1fr minmax(280px,420px);gap:32px;align-items:center}
+@media(max-width:800px){.hero{grid-template-columns:1fr}}
+.dial svg{width:100%;height:auto;display:block}
+.seg{cursor:pointer;transition:opacity .15s}
+.seg.train{fill:var(--train)}.seg.test{fill:var(--test)}
+.seg:hover,.seg:focus{opacity:.55;outline:none}
+.ctr{fill:var(--ink);font-family:"Bricolage Grotesque",sans-serif}
+.ctr.s{fill:var(--mute);font-family:"IBM Plex Sans",sans-serif}
+.tabs{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:18px 0 12px}
+.tabs button{font:inherit;background:var(--panel);color:var(--ink);border:0;padding:8px 16px;cursor:pointer}
+.tabs button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.tabs button:focus-visible{outline:2px solid var(--test);outline-offset:-2px}
+.legend{display:flex;gap:18px;font-size:.9rem;color:var(--mute);flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.facts{margin-top:14px;font-size:.95rem;min-height:3.2em}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.93rem}
+th,td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:500;color:var(--mute)}
+td.hi{font-weight:500}
+.bar{display:grid;grid-template-columns:minmax(120px,190px) 1fr 76px;gap:12px;align-items:center;margin:9px 0;font-size:.92rem}
+.bar .t{height:18px;background:var(--line);border-radius:4px;overflow:hidden}
+.bar .t b{display:block;height:100%;border-radius:4px;background:var(--train);transition:width .45s}
+.bar .t b.o{background:var(--test)}.bar .t b.g{background:var(--good)}.bar .t b.r{background:var(--bad)}
+.bar span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+@media(max-width:520px){.bar{grid-template-columns:1fr 64px}.bar .t{grid-column:1/-1;grid-row:2}}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.kpi{display:flex;gap:28px;flex-wrap:wrap;margin-bottom:8px}
+.kpi div{min-width:110px}.kpi strong{font:700 1.9rem "Bricolage Grotesque",sans-serif;display:block;line-height:1.1}
+.kpi small{color:var(--mute)}
+.note{margin-top:14px;font-size:.9rem;color:var(--mute)}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 20px;margin:0;font-size:.93rem}
+dt{color:var(--mute)}dd{margin:0}
+.cam{display:grid;grid-template-columns:minmax(240px,1fr) minmax(240px,1fr);gap:24px}
+@media(max-width:720px){.cam{grid-template-columns:1fr}}
+.cam video,.cam canvas{width:100%;aspect-ratio:1;background:#000;border-radius:8px;display:block;object-fit:cover}
+.cam canvas{width:128px;margin-top:10px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.btns button,.btns label{font:inherit;background:var(--ink);color:var(--bg);border:0;border-radius:8px;padding:9px 14px;cursor:pointer}
+.btns .sec{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+.btns button:focus-visible,.btns label:focus-within{outline:2px solid var(--test);outline-offset:2px}
+.btns input{position:absolute;opacity:0;width:1px;height:1px}
+#cstat{font-size:.9rem;color:var(--mute);min-height:2.8em}
+#top{font:700 1.6rem "Bricolage Grotesque",sans-serif;margin-bottom:8px}
+footer{margin-top:64px;color:var(--mute);font-size:.85rem}
+</style>
+</head>
+<body>
+<main>
+<header class="hero">
+  <div>
+    <h1>¿Reconoce el modelo un objeto desde un ángulo que nunca vio?</h1>
+    <p class="lead">Cinco objetos de COIL-100 giran sobre una plataforma y se fotografían cada 5°. Se compara un Random Forest con características clásicas frente a MobileNetV2, y se mide cuánto aceleran la GPU, el procesamiento paralelo y ONNX.</p>
+    <div class="tabs" role="group" aria-label="Escenario de partición">
+      <button id="bA" aria-pressed="false">Escenario A: bloques intercalados</button>
+      <button id="bB" aria-pressed="true">Escenario B: ángulos nuevos</button>
+    </div>
+    <div class="legend"><span><i style="background:var(--train)"></i>Entrenamiento</span><span><i style="background:var(--test)"></i>Prueba</span></div>
+    <div class="facts" id="facts" aria-live="polite"></div>
+  </div>
+  <div class="dial"><svg id="dial" viewBox="0 0 400 400" role="img" aria-label="Plataforma giratoria con las 72 vistas de cada objeto, coloreadas según sean de entrenamiento o de prueba"></svg></div>
+</header>
+
+<section>
+  <h2>Calidad de clasificación</h2>
+  <p>En el escenario A, las vistas de prueba quedan entre vistas de entrenamiento muy parecidas, así que acertar es fácil. En el B, los ángulos de 180° a 355° no aparecen en el entrenamiento: es la prueba real de generalización.</p>
+  <div class="panel scroll"><table id="cls"></table></div>
+  <div class="two" style="margin-top:20px">
+    <div class="panel"><h3 style="font-size:1.15rem;margin-bottom:10px">Random Forest, escenario B: recall por objeto</h3><div id="rec"></div>
+      <p class="note" style="margin-bottom:0">El objeto 63 absorbe falsos positivos (precisión 0,766) y el 75 pierde un 30,6 % de sus vistas.</p></div>
+    <div class="panel"><h3 style="font-size:1.15rem;margin-bottom:10px">Efecto de la resolución en MobileNetV2</h3><div id="res"></div>
+      <p class="note" style="margin-bottom:0">A 64×64 el entrenamiento es 3,3× más rápido, pero se pierden 4 imágenes de 180.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Velocidad de inferencia</h2>
+  <p>Latencia media por imagen. Las tres primeras filas incluyen leer la imagen y prepararla; las dos últimas miden solo el modelo sobre tensores ya listos, por eso no son comparables con las anteriores.</p>
+  <div class="panel">
+    <div class="tabs" role="group" aria-label="Métrica"><button id="mL" aria-pressed="true">Latencia (ms)</button><button id="mT" aria-pressed="false">Imágenes por segundo</button></div>
+    <div id="lat"></div>
+    <div class="kpi" style="margin-top:18px"><div><strong>6,13×</strong><small>ONNX frente a PyTorch en CPU</small></div><div><strong>−83,7 %</strong><small>latencia con ONNX</small></div><div><strong>2,3×</strong><small>GPU frente a CPU, con carga de imagen</small></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Tamaño de lote</h2>
+  <p>Procesar varias imágenes juntas aprovecha mejor el hardware, sobre todo en GPU. La precisión se mantiene en 100 % en todos los casos.</p>
+  <div class="panel"><div class="tabs" role="group" aria-label="Dispositivo"><button id="dC" aria-pressed="false">CPU</button><button id="dG" aria-pressed="true">GPU (T4)</button></div><div id="bat"></div></div>
+</section>
+
+<section>
+  <h2>Paralelización de características</h2>
+  <p>Extraer color, HOG y LBP de las 360 imágenes del escenario B con varios procesos. Con 4 hilos lógicos (2 núcleos físicos) el tiempo casi no mejora al pasar de 2 a 4 procesos.</p>
+  <div class="two">
+    <div class="panel"><div id="par"></div></div>
+    <div class="panel"><div class="kpi"><div><strong>1,80×</strong><small>con 2 procesos</small></div><div><strong>1,95×</strong><small>con 4 procesos</small></div></div>
+      <p class="note">La eficiencia cae de 90 % a 49 %. Los resultados son idénticos a la versión secuencial.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Prueba con cámara</h2>
+  <p>Clasifica una foto con tu propio modelo exportado. Carga el archivo <b>mobilenet_128_scenario_B.onnx</b> de la carpeta results del notebook; todo se procesa en tu navegador y ninguna imagen sale de tu dispositivo. COIL-100 usa objetos sobre fondo negro, así que obtendrás mejores resultados con un fondo oscuro liso.</p>
+  <div class="panel cam">
+    <div>
+      <video id="vid" playsinline muted></video>
+      <div class="btns">
+        <button id="bCam">Activar cámara</button>
+        <button id="bSnap" class="sec">Capturar y clasificar</button>
+        <label class="sec">Subir foto<input type="file" id="fImg" accept="image/*"></label>
+      </div>
+    </div>
+    <div>
+      <div class="btns" style="margin-top:0"><label>Cargar modelo .onnx<input type="file" id="fMod" accept=".onnx"></label></div>
+      <div id="cstat" aria-live="polite">Sin modelo cargado.</div>
+      <div id="top"></div>
+      <div id="prob"></div>
+      <canvas id="pre" width="128" height="128" aria-label="Imagen reducida a 128 por 128 que recibe el modelo"></canvas>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Exportación a ONNX</h2>
+  <p>El modelo MobileNetV2 de 128×128 se exportó con tamaño de lote dinámico y se comparó con PyTorch sobre 50 imágenes de prueba.</p>
+  <div class="two">
+    <div class="panel"><dl><dt>Tamaño del archivo</dt><dd>8,48 MB</dd><dt>Opset</dt><dd>18</dd><dt>Entrada</dt><dd>[batch, 3, 128, 128]</dd><dt>Salida</dt><dd>[batch, 5]</dd><dt>Parámetros</dt><dd>2.230.277</dd></dl></div>
+    <div class="panel"><dl><dt>Coincidencia de predicciones</dt><dd>100 %</dd><dt>Diferencia máxima de logits</dt><dd>1,76 × 10⁻⁵</dd><dt>Precisión en la muestra</dt><dd>100 %</dd><dt>Latencia p95</dt><dd>3,40 ms (PyTorch: 17,70 ms)</dd></dl></div>
+  </div>
+</section>
+
+<section>
+  <h2>Entorno experimental</h2>
+  <div class="panel"><dl><dt>Plataforma</dt><dd>Kaggle, Linux x86_64</dd><dt>CPU</dt><dd>2 núcleos físicos, 4 hilos lógicos</dd><dt>RAM</dt><dd>31,35 GB</dd><dt>GPU</dt><dd>2 × Tesla T4 (CUDA 13.0)</dd><dt>Software</dt><dd>PyTorch 2.11, scikit-learn 1.6.1, OpenCV 4.14, NumPy 2.1.3</dd><dt>Configuración</dt><dd>8 épocas, lote de 32, tasa de aprendizaje 1e-4, 100 árboles, semilla 42</dd><dt>Objetos</dt><dd>43, 63, 68, 74 y 75 (72 vistas cada uno)</dd></dl></div>
+</section>
+<footer>Datos tomados de las salidas del notebook. Dataset: COIL-100 (7.200 imágenes, 100 objetos).</footer>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const fmt=(n,d=1)=>n.toLocaleString('es-PE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const press=(a,b,on)=>{$(a).setAttribute('aria-pressed',on);$(b).setAttribute('aria-pressed',!on)};
+
+/* Dial */
+const info={
+ A:{rule:a=>((Math.floor(a/5)/4|0)%5===4)?'test':'train',txt:'60 imágenes de prueba (3 bloques de 20° por objeto). Random Forest acierta 100 %: las vistas de prueba tienen vecinas casi idénticas en el entrenamiento.'},
+ B:{rule:a=>a<180?'train':'test',txt:'Entrena con 0°–175° y prueba con 180°–355°. Random Forest baja a 93,9 %; MobileNetV2 a 128×128 mantiene 100 %.'}
+};
+let scen='B';
+function pol(r,deg){const t=(deg-90)*Math.PI/180;return[200+r*Math.cos(t),200+r*Math.sin(t)]}
+function drawDial(){
+  const svg=$('dial');let h='';
+  for(let i=0;i<72;i++){
+    const a=i*5,a0=a-2.3,a1=a+2.3;
+    const [x1,y1]=pol(185,a0),[x2,y2]=pol(185,a1),[x3,y3]=pol(120,a1),[x4,y4]=pol(120,a0);
+    const k=info[scen].rule(a);
+    h+=`<path class="seg ${k}" tabindex="0" data-a="${a}" data-k="${k}" d="M${x1},${y1}A185,185 0 0 1 ${x2},${y2}L${x3},${y3}A120,120 0 0 0 ${x4},${y4}Z"><title>${a}° · ${k==='train'?'entrenamiento':'prueba'}</title></path>`;
+  }
+  for(const a of [0,90,180,270]){const [x,y]=pol(200,a);h+=`<text class="ctr s" x="${x}" y="${y+4}" font-size="11" text-anchor="middle">${a}°</text>`}
+  h+=`<text class="ctr" id="cA" x="200" y="205" font-size="52" font-weight="700" text-anchor="middle">${scen==='A'?'100 %':'93,9 %'}</text>
+  <text class="ctr s" x="200" y="232" font-size="13" text-anchor="middle">Random Forest</text>
+  <text class="ctr s" id="cB" x="200" y="165" font-size="12" text-anchor="middle">precisión en prueba</text>`;
+  svg.innerHTML=h;
+  $('facts').textContent=info[scen].txt;
+}
+function show(e){const s=e.target.closest('.seg');if(!s)return;
+  $('cB').textContent=`${s.dataset.a}° · ${s.dataset.k==='train'?'entrenamiento':'prueba'}`}
+$('dial').addEventListener('mouseover',show);$('dial').addEventListener('focusin',show);
+$('dial').addEventListener('mouseleave',()=>$('cB').textContent='precisión en prueba');
+$('bA').onclick=()=>{scen='A';press('bA','bB',true);drawDial()};
+$('bB').onclick=()=>{scen='B';press('bB','bA',true);drawDial()};
+
+/* Tabla de clasificación */
+const cls=[
+ ['Random Forest','A','1870 car.',1,1,1,1],
+ ['Random Forest','B','1870 car.',.9389,.9532,.9389,.9374],
+ ['MobileNetV2 128×128','B','2,23 M par.',1,1,1,1],
+ ['MobileNetV2 64×64','B','2,23 M par.',.9778,.98,.9778,.9777]];
+$('cls').innerHTML='<tr><th>Modelo</th><th>Escenario</th><th>Entrada</th><th>Exactitud</th><th>Precisión</th><th>Recall</th><th>F1</th></tr>'+
+ cls.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td>${r.slice(3).map((v,i)=>`<td class="${i===0?'hi':''}">${fmt(v*100,1)} %</td>`).join('')}</tr>`).join('');
+
+/* Barras genéricas */
+function bars(el,rows,max,unit,d=1){
+  $(el).innerHTML=rows.map(r=>`<div class="bar"><span>${r[0]}</span><span class="t"><b class="${r[2]||''}" style="width:${Math.max(2,r[1]/max*100)}%"></b></span><span>${fmt(r[1],d)}${unit}</span></div>`).join('')}
+bars('rec',[['obj043',100,'g'],['obj063',100,'g'],['obj068',100,'g'],['obj074',100,'g'],['obj075',69.44,'r']],100,' %');
+bars('res',[['128×128',100,'g'],['64×64',97.78,'o']],100,' %');
+bars('par',[['Secuencial',1,''],['2 procesos',1.80,'g'],['4 procesos',1.95,'g'],['Ideal con 4',4,'o']],4,'×',2);
+
+/* Latencia */
+const lat=[['Random Forest (CPU)',14.07,71.06,'o'],['MobileNetV2 CPU',16.31,61.30,''],['MobileNetV2 GPU',7.12,140.47,'g'],['PyTorch CPU (solo modelo)',14.71,68.11,''],['ONNX Runtime CPU (solo modelo)',2.40,417.93,'g']];
+let metric='L';
+function drawLat(){
+  const i=metric==='L'?1:2,max=Math.max(...lat.map(r=>r[i]));
+  bars('lat',lat.map(r=>[r[0],r[i],r[3]]),max,metric==='L'?' ms':' img/s',metric==='L'?2:1)}
+$('mL').onclick=()=>{metric='L';press('mL','mT',true);drawLat()};
+$('mT').onclick=()=>{metric='T';press('mT','mL',true);drawLat()};
+
+/* Lotes */
+const bat={cpu:[[1,19.05,52.5],[8,9.40,106.4],[16,8.05,124.3],[32,11.09,90.2]],gpu:[[1,8.85,112.9],[8,2.01,498.2],[16,1.72,582.5],[32,1.61,619.3]]};
+let dev='gpu';
+function drawBat(){const d=bat[dev],max=Math.max(...d.map(r=>r[2]));
+  bars('bat',d.map(r=>[`Lote de ${r[0]} · ${fmt(r[1],2)} ms/img`,r[2],dev==='gpu'?'g':'']),max,' img/s')}
+$('dC').onclick=()=>{dev='cpu';press('dC','dG',true);drawBat()};
+$('dG').onclick=()=>{dev='gpu';press('dG','dC',true);drawBat()};
+
+drawDial();drawLat();drawBat();
+
+/* Cámara */
+const CLASSES=['obj043','obj063','obj068','obj074','obj075'],MEAN=[.485,.456,.406],STD=[.229,.224,.225];
+let sess=null,stream=null;const pre=$('pre'),pctx=pre.getContext('2d',{willReadFrequently:true});
+const say=t=>$('cstat').textContent=t;
+$('bCam').onclick=async()=>{
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    $('vid').srcObject=stream;await $('vid').play();say(sess?'Cámara activa. Toca Capturar y clasificar.':'Cámara activa. Falta cargar el modelo .onnx.')}
+  catch(e){say('No se pudo abrir la cámara ('+e.name+'). Permite el acceso en el navegador o usa Subir foto.')}};
+$('fMod').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  if(typeof ort==='undefined'){say('No se pudo cargar ONNX Runtime Web. Revisa tu conexión.');return}
+  say('Cargando modelo…');
+  try{ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/';ort.env.wasm.numThreads=1;
+    sess=await ort.InferenceSession.create(new Uint8Array(await f.arrayBuffer()),{executionProviders:['wasm']});
+    say('Modelo listo: '+f.name+'. Captura una imagen.')}
+  catch(err){sess=null;say('No se pudo cargar el modelo: '+err.message)}};
+function toTensor(src){
+  const w=src.videoWidth||src.naturalWidth||src.width,h=src.videoHeight||src.naturalHeight||src.height,s=Math.min(w,h);
+  pctx.drawImage(src,(w-s)/2,(h-s)/2,s,s,0,0,128,128);
+  const d=pctx.getImageData(0,0,128,128).data,n=128*128,f=new Float32Array(3*n);
+  for(let c=0;c<3;c++)for(let i=0;i<n;i++)f[c*n+i]=(d[i*4+c]/255-MEAN[c])/STD[c];
+  return f}
+async function classify(src){
+  const f=toTensor(src);
+  if(!sess){say('Carga primero el modelo .onnx para ver la predicción.');return}
+  try{const t0=performance.now();
+    const out=await sess.run({input:new ort.Tensor('float32',f,[1,3,128,128])});
+    const ms=performance.now()-t0,l=Array.from(out.logits.data),m=Math.max(...l),e=l.map(v=>Math.exp(v-m)),z=e.reduce((a,b)=>a+b,0),p=e.map(v=>v/z);
+    const k=p.indexOf(Math.max(...p));
+    $('top').textContent=CLASSES[k]+' · '+fmt(p[k]*100,1)+' %';
+    bars('prob',CLASSES.map((c,i)=>[c,p[i]*100,i===k?'g':'']),100,' %');
+    say('Inferencia en '+fmt(ms,1)+' ms (WebAssembly, CPU del navegador).')}
+  catch(err){say('Error al clasificar: '+err.message)}}
+$('bSnap').onclick=()=>{if(!stream){say('Activa la cámara primero.');return}classify($('vid'))};
+$('fImg').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image();
+  im.onload=()=>{classify(im);URL.revokeObjectURL(im.src)};im.src=URL.createObjectURL(f)};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+</body>
+</html>
