@@ -1,0 +1,19 @@
+{
+  "model": "MobileNetV2",
+  "scenario": "mobilenet_64_cpu_scenario_B",
+  "image_size": 64,
+  "accuracy": 0.9777777777777777,
+  "precision_macro": 0.9800000000000001,
+  "recall_macro": 0.9777777777777779,
+  "f1_macro": 0.9777089783281733,
+  "training_device": "cuda",
+  "inference_device": "cpu",
+  "training_time_s": 2.7193988170000125,
+  "inference_latency_mean_ms": 11.73590192777883,
+  "inference_latency_p95_ms": 12.478396900004894,
+  "throughput_img_s": 85.20861934207241,
+  "ram_before_mb": 1785.04296875,
+  "ram_peak_sampled_mb": 1785.05078125,
+  "n_parameters": 2230277,
+  "n_test": 180
+}

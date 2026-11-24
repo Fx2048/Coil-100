@@ -1,0 +1,7 @@
+{
+  "images_evaluated": 50,
+  "prediction_agreement": 1.0,
+  "onnx_sample_accuracy": 1.0,
+  "max_absolute_difference": 1.7642974853515625e-05,
+  "allclose_atol_1e-4_rtol_1e-4": true
+}

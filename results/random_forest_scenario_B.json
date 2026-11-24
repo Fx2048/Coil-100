@@ -1,0 +1,19 @@
+{
+  "model": "RandomForest",
+  "scenario": "scenario_B",
+  "accuracy": 0.9388888888888889,
+  "precision_macro": 0.9531914893617021,
+  "recall_macro": 0.9388888888888889,
+  "f1_macro": 0.9374284021331227,
+  "feature_extraction_train_s": 1.3210936479999873,
+  "fit_train_s": 0.37287011400002257,
+  "training_total_s": 1.6939637620000099,
+  "inference_latency_mean_ms": 14.07272363888852,
+  "inference_latency_p95_ms": 16.567555049982726,
+  "throughput_img_s": 71.0594498734135,
+  "ram_before_mb": 870.76953125,
+  "ram_after_evaluation_mb": 871.140625,
+  "n_features": 1870,
+  "n_train": 180,
+  "n_test": 180
+}
