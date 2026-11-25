@@ -32,6 +32,10 @@ https://coil100.lovable.app/
 
 https://github.com/Fx2048/coil100
 
+💻 **Repositorio de proyecto:**
+
+https://github.com/Fx2048/Coil-100/
+
 ## Tecnologías
 
 Las tecnologías y herramientas utilizadas en el proyecto se documentarán conforme a la implementación de cada componente.
